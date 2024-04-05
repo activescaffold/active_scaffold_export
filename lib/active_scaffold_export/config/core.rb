@@ -14,7 +14,4 @@ ActiveScaffold::Config::Core.class_eval do
       :export_force_quotes, :export_default_full_download,
       :export_default_delimiter, :export_default_skip_header, 
       :export_default_file_format, :export_xlsx_avaliable
-
-  ActiveScaffold::Routing::ACTIVE_SCAFFOLD_CORE_ROUTING[:collection][:show_export] = :get
-  ActiveScaffold::Routing::ACTIVE_SCAFFOLD_CORE_ROUTING[:collection][:export] = :post
 end

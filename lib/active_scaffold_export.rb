@@ -4,9 +4,6 @@ ActiveScaffold rescue throw "should have included ActiveScaffold plug in first. 
 require 'active_scaffold_export/engine'
 require 'active_scaffold_export/version'
 
-# Load our overrides
-require "active_scaffold_export/config/core.rb"
-
 module ActiveScaffoldExport
   def self.root
     File.dirname(__FILE__) + "/.."
