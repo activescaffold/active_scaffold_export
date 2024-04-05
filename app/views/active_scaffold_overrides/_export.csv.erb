@@ -8,8 +8,7 @@
     :headers => @export_columns.collect { |column| format_export_column_header_name(column) }
   }
 
-  csv_lib = Object.const_defined?('CSV') ? CSV : FasterCSV
-  data = csv_lib.generate(fcsv_options) do |csv|
+  data = CSV.generate(**fcsv_options) do |csv|
     csv << fcsv_options[:headers] unless params[:skip_header] == 'true'
     @records.each do |record|
       csv << @export_columns.collect { |column|
