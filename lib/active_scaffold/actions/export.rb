@@ -74,7 +74,7 @@ module ActiveScaffold::Actions
             sheet.add_row(@export_columns.collect { |column| view_context.format_export_column_header_name(column) }, style: header) unless params[:skip_header]
             find_items_for_export do |records|
               records.each do |record|
-                sheet.add_row @export_columns.collect { |column| view_context.get_export_column_value(record, column, false) }
+                sheet.add_row @export_columns.collect { |column| view_context.get_export_column_value(record, column, :xlsx) }
               end
             end
           end

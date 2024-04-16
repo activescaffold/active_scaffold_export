@@ -9,14 +9,14 @@ module ActiveScaffold
       # format_export_column(raw_value)
       # format_singular_association_export_column(association_record)
       # format_plural_association_export_column(association_records)
-      def get_export_column_value(record, column, csv = true)
+      def get_export_column_value(record, column, format)
         if (method = export_column_override(column))
           send(method, record)
         else
           raw_value = record.send(column.name)
 
           if column.association.nil? or column_empty?(raw_value)
-            csv ? format_export_column(raw_value) : raw_value # xlsx needs original data type
+            format_export_column(raw_value, format)
           elsif column.association
             if column.association.collection?
               format_plural_association_export_column(raw_value)
@@ -31,16 +31,13 @@ module ActiveScaffold
         override_helper column, 'export_column'
       end
 
-      def export_column_override?(column)
-        respond_to?(export_column_override(column))
-      end
-
-      def format_export_column(raw_value)
-        format_value_for_csv(raw_value) 
+      def format_export_column(raw_value, format)
+        method = "format_value_for_#{format}"
+        respond_to?(method) ? send(method, raw_value) : raw_value
       end
 
       def format_value_for_csv(column_value)
-        value = if column_empty?(column_value)
+        if column_empty?(column_value)
           active_scaffold_config.list.empty_field_text
         elsif column_value.is_a?(Time) || column_value.is_a?(Date)
           l(column_value, :format => :default)

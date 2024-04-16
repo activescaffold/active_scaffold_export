@@ -12,7 +12,7 @@
     csv << fcsv_options[:headers] unless params[:skip_header] == 'true'
     @records.each do |record|
       csv << @export_columns.collect { |column|
-        get_export_column_value(record, column)
+        get_export_column_value(record, column, :csv)
       }
     end
   end
