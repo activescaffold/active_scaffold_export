@@ -10,8 +10,8 @@ module ActiveScaffold
       # format_singular_association_export_column(association_record)
       # format_plural_association_export_column(association_records)
       def get_export_column_value(record, column, csv = true)
-        if export_column_override? column
-          send(export_column_override(column), record)
+        if (method = export_column_override(column))
+          send(method, record)
         else
           raw_value = record.send(column.name)
 
@@ -28,7 +28,7 @@ module ActiveScaffold
       end
 
       def export_column_override(column)
-        "#{column.name.to_s.gsub('?', '')}_export_column" # parse out any question marks (see issue 227)
+        override_helper column, 'export_column'
       end
 
       def export_column_override?(column)
