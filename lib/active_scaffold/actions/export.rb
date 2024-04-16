@@ -53,41 +53,42 @@ module ActiveScaffold::Actions
         Mime::Type.register "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", :xlsx
       end
 
-      respond_to do |format|
-        format.csv do
-          response.headers['Content-type'] = 'text/csv'
-          # start streaming output
-          self.response_body = Enumerator.new do |y|
-            find_items_for_export do |records|
-              @records = records
-              str = render_to_string :partial => 'export', :layout => false, :formats => [:csv]
-              y << str
-              params[:skip_header] = 'true' # skip header on the next run
-            end
-          end
-        end
-        format.xlsx do 
-          response.headers['Content-type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-          p = Axlsx::Package.new
-          header = p.workbook.styles.add_style sz: 11, b: true,:bg_color => "69B5EF", :fg_color => "FF", alignment: { horizontal: :center }
-          p.workbook.add_worksheet(name: active_scaffold_config.label) do |sheet|
-            sheet.add_row(@export_columns.collect { |column| view_context.format_export_column_header_name(column) }, style: header) unless params[:skip_header]
-            find_items_for_export do |records|
-              records.each do |record|
-                sheet.add_row @export_columns.collect { |column| view_context.get_export_column_value(record, column, :xlsx) }
-              end
-            end
-          end
-          stream = p.to_stream # when adding rows to sheet, they won't pass to this stream if declared before. axlsx issue?
-          self.response_body = Enumerator.new do |y|
-            y << stream.read 
-          end
-        end
-
-      end
+      respond_to_action(:export)
     end
 
     protected
+
+    def export_respond_to_csv
+      response.headers['Content-type'] = 'text/csv'
+      # start streaming output
+      self.response_body = Enumerator.new do |y|
+        find_items_for_export do |records|
+          @records = records
+          str = render_to_string :partial => 'export', :layout => false, :formats => [:csv]
+          y << str
+          params[:skip_header] = 'true' # skip header on the next run
+        end
+      end
+    end
+
+    def export_respond_to_xlsx
+      response.headers['Content-type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      pkg = Axlsx::Package.new
+      header = pkg.workbook.styles.add_style sz: 11, b: true,:bg_color => "69B5EF", :fg_color => "FF", alignment: { horizontal: :center }
+      pkg.workbook.add_worksheet(name: active_scaffold_config.label) do |sheet|
+        sheet.add_row(@export_columns.collect { |column| view_context.format_export_column_header_name(column) }, style: header) unless params[:skip_header]
+        find_items_for_export do |records|
+          records.each do |record|
+            sheet.add_row @export_columns.collect { |column| view_context.get_export_column_value(record, column, :xlsx) }
+          end
+        end
+      end
+      stream = pkg.to_stream # when adding rows to sheet, they won't pass to this stream if declared before. axlsx issue?
+      self.response_body = Enumerator.new do |y|
+        y << stream.read
+      end
+    end
+
     def export_columns
       return @export_columns if defined? @export_columns
       @export_columns = active_scaffold_config.export.columns.reject { |col| params[:export_columns][col.to_sym].nil? }
@@ -152,6 +153,10 @@ module ActiveScaffold::Actions
 
     def show_export_authorized?
       export_authorized?
+    end
+
+    def export_formats
+      active_scaffold_config.export.formats
     end
 
   end

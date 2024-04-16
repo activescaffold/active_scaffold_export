@@ -4,6 +4,7 @@ module ActiveScaffold::Config
 
     def initialize(core_config)
       @core = core_config
+      @formats = [:csv, :xlsx]
     end
 
     # global level configuration
