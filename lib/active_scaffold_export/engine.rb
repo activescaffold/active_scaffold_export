@@ -7,8 +7,17 @@ module ActiveScaffoldExport
       end
     end
 
-    initializer 'active_scaffold_sortable.extensions' do
+    initializer 'active_scaffold_export.extensions' do
       require "active_scaffold_export/config/core.rb"
+    end
+
+    initializer "active_scaffold_export" do
+      ActiveSupport.on_load :active_scaffold do
+        require 'autoload'
+        ActiveSupport.on_load :action_view do
+          include ActiveScaffold::Helpers::ExportHelpers
+        end
+      end
     end
   end
 end
