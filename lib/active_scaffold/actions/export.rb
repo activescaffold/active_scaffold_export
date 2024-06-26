@@ -75,7 +75,7 @@ module ActiveScaffold::Actions
       response.headers['Content-type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       pkg = Axlsx::Package.new
       header = pkg.workbook.styles.add_style sz: 11, b: true,:bg_color => "69B5EF", :fg_color => "FF", alignment: { horizontal: :center }
-      pkg.workbook.add_worksheet(name: active_scaffold_config.label) do |sheet|
+      pkg.workbook.add_worksheet(name: worksheet_name) do |sheet|
         sheet.add_row(@export_columns.collect { |column| view_context.format_export_column_header_name(column) }, style: header) unless params[:skip_header]
         find_items_for_export do |records|
           records.each do |record|
@@ -87,6 +87,12 @@ module ActiveScaffold::Actions
       self.response_body = Enumerator.new do |y|
         y << stream.read
       end
+    end
+
+    def worksheet_name(options = {})
+      active_scaffold_config.label.
+        gsub(/[#{Regexp.quote Axlsx::WORKSHEET_NAME_FORBIDDEN_CHARS.join}]/, options[:replace] || '-').
+        truncate(Axlsx::WORKSHEET_MAX_NAME_LENGTH, options)
     end
 
     def export_columns

@@ -58,13 +58,20 @@ active_scaffold:
 ```
 
 ### XLSX support 
-This support depends on axlsx_rails and axlsx of course. 
+This support depends on caxlsx_rails and caxlsx of course. 
 header styling override will be added soon. 
 NOTE: There's NO streaming support for xlsx format. Only CSV. So if your data is huge, set default_file_format to 'csv' instead.
 Streaming in xlsx will never be supported since the entire file needs to be serialized and zipped to be a valid OOXML file. 
 So, rather than streaming, background jobs will be the most likely future approach.  
 [Read axlsx issue about this](https://github.com/randym/axlsx/issues/169#issuecomment-13252750)
 
-This gem has not been tested in other rubies than REE and Ruby 1.9. 
+The sheet name is generated from conf.label, replacing forbidden chars with '-' and truncated to 31. The generated name can be changed defining workseet_name method in the controller, and calling super with options for truncate String method, and :replace option to use other character, e.g.
+
+```ruby
+def worksheet_name(options = {})
+  super replace: '_', omission: ''
+end
+```
+
 For contact, help, support, comments, please use Active Scaffold official mailing list  activescaffold@googlegroups.com
 
