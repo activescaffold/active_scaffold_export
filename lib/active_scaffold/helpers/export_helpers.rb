@@ -12,6 +12,8 @@ module ActiveScaffold
       def get_export_column_value(record, column, format)
         if (method = export_column_override(column))
           send(method, record)
+        elsif column.list_ui && (method = override_export_ui(column.list_ui))
+          send(method, record, column, ui_options: column.list_ui_options || column.options)
         else
           raw_value = record.send(column.name)
 
@@ -30,6 +32,15 @@ module ActiveScaffold
       def export_column_override(column)
         override_helper column, 'export_column'
       end
+
+      # the naming convention for overriding column types with helpers
+      def override_export_ui(list_ui)
+        ActiveScaffold::Registry.cache :export_ui_overrides, list_ui do
+          method = "active_scaffold_export_#{list_ui}"
+          method if respond_to? method
+        end
+      end
+      alias override_export_ui? override_export_ui
 
       def format_export_column(raw_value, format)
         method = "format_value_for_#{format}"
