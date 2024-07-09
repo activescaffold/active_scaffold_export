@@ -14,7 +14,7 @@ module ActiveScaffoldExport
     end
 
     initializer 'active_scaffold_export.extensions' do
-      require "active_scaffold_export/config/core.rb"
+      ActiveScaffold::Config::Core.send :include, ActiveScaffoldExport::Core
     end
   end
 end

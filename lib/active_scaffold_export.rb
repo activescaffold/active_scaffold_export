@@ -8,6 +8,7 @@ module ActiveScaffoldExport
   def self.root
     File.dirname(__FILE__) + "/.."
   end
+  autoload 'Core', 'active_scaffold_export/core.rb'
 end
 
 module ActiveScaffold
