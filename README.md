@@ -14,7 +14,7 @@ gem 'fastercsv'
 ```
 if you want xlsx format, add:
 ```
-gem 'axlsx_rails'
+gem 'caxlsx_rails'
 ```
 if that gem is present, XLSX will be used by default. 
 You can change this by adding to active scaffold config:
