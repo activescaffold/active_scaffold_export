@@ -69,10 +69,17 @@ module ActiveScaffold
         format_value(firsts.join(','))
       end
 
-      ## This helper can be overridden to change the way that the headers
-      # are formatted. For instance, you might want column.name.to_s.humanize
+      ## This helper can be overridden to change the name of the headers
+      # For instance, you might want column.name.to_s.humanize
       def format_export_column_header_name(column)
         column.label
+      end
+
+      ## This helper can be overridden to change the style of the headers
+      def export_column_header_style(column, format)
+        if format == :xlsx
+          @default_style ||= {sz: 11, b: true, bg_color: "69B5EF", fg_color: "FF", alignment: {horizontal: :center}}
+        end
       end
 
     end

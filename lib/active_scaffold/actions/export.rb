@@ -70,9 +70,13 @@ module ActiveScaffold::Actions
     def export_respond_to_xlsx
       response.headers['Content-type'] = Mime[:xlsx]
       pkg = Axlsx::Package.new
-      header = pkg.workbook.styles.add_style sz: 11, b: true,:bg_color => "69B5EF", :fg_color => "FF", alignment: { horizontal: :center }
       pkg.workbook.add_worksheet(name: worksheet_name) do |sheet|
-        sheet.add_row(@export_columns.collect { |column| view_context.format_export_column_header_name(column) }, style: header) unless params[:skip_header]
+        styles = @export_columns.collect { |column| view_context.export_column_header_style(column, :xlsx) }
+        widths = styles.collect { |style| style[:width] || :auto }
+        unless params[:skip_header]
+          styles.map! { |style| pkg.workbook.styles.add_style style if style }
+          sheet.add_row(@export_columns.collect { |column| view_context.format_export_column_header_name(column) }, style: styles, widths: widths)
+        end
         find_items_for_export do |records|
           records.each do |record|
             sheet.add_row @export_columns.collect { |column| view_context.get_export_column_value(record, column, :xlsx) }
