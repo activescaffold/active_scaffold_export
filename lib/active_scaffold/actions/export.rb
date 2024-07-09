@@ -49,17 +49,13 @@ module ActiveScaffold::Actions
       end
       response.headers['Content-Disposition'] = "attachment; filename=#{export_file_name}"
 
-      unless defined? Mime::XLSX
-        Mime::Type.register "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", :xlsx
-      end
-
       respond_to_action(:export)
     end
 
     protected
 
     def export_respond_to_csv
-      response.headers['Content-type'] = 'text/csv'
+      response.headers['Content-type'] = Mime[:csv]
       # start streaming output
       self.response_body = Enumerator.new do |y|
         find_items_for_export do |records|
@@ -72,7 +68,7 @@ module ActiveScaffold::Actions
     end
 
     def export_respond_to_xlsx
-      response.headers['Content-type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      response.headers['Content-type'] = Mime[:xlsx]
       pkg = Axlsx::Package.new
       header = pkg.workbook.styles.add_style sz: 11, b: true,:bg_color => "69B5EF", :fg_color => "FF", alignment: { horizontal: :center }
       pkg.workbook.add_worksheet(name: worksheet_name) do |sheet|
