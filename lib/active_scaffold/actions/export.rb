@@ -79,7 +79,15 @@ module ActiveScaffold::Actions
         end
         find_items_for_export do |records|
           records.each do |record|
-            sheet.add_row @export_columns.collect { |column| view_context.get_export_column_value(record, column, :xlsx) }
+            row = []
+            styles = []
+            @export_columns.each do |column|
+              data, style = view_context.get_export_column_value(record, column, :xlsx)
+              style = pkg.workbook.styles.add_style style if style
+              row << data
+              styles << style
+            end
+            sheet.add_row row, style: styles, widths: widths
           end
         end
       end

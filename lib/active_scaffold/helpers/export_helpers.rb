@@ -11,9 +11,9 @@ module ActiveScaffold
       # format_plural_association_export_column(association_records)
       def get_export_column_value(record, column, format)
         if (method = export_column_override(column))
-          send(method, record)
+          send(method, record, format)
         elsif column.list_ui && (method = override_export_ui(column.list_ui))
-          send(method, record, column, ui_options: column.list_ui_options || column.options)
+          send(method, record, column, format, ui_options: column.list_ui_options || column.options)
         else
           raw_value = record.send(column.name)
 
