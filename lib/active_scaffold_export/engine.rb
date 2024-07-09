@@ -15,6 +15,7 @@ module ActiveScaffoldExport
 
     initializer 'active_scaffold_export.extensions' do
       ActiveScaffold::Config::Core.send :include, ActiveScaffoldExport::Core
+      ActiveScaffold::DataStructures::Column.send :include, ActiveScaffoldExport::Column
     end
   end
 end

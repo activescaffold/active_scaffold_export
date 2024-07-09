@@ -11,21 +11,25 @@ module ActiveScaffold
       # format_plural_association_export_column(association_records)
       def get_export_column_value(record, column, format)
         if (method = export_column_override(column))
-          send(method, record, format)
+          value, options = send(method, record, format)
+          [value, options || column.export_options&.dig(format)]
         elsif column.list_ui && (method = override_export_ui(column.list_ui))
-          send(method, record, column, format, ui_options: column.list_ui_options || column.options)
+          value, options = send(method, record, column, format, ui_options: column.list_ui_options || column.options)
+          [value, options || column.export_options&.dig(format)]
         else
           raw_value = record.send(column.name)
 
-          if column.association.nil? or column_empty?(raw_value)
-            format_export_column(raw_value, format)
-          elsif column.association
-            if column.association.collection?
-              format_plural_association_export_column(raw_value)
-            else
-              format_singular_association_export_column(raw_value)
+          value =
+            if column.association.nil? or column_empty?(raw_value)
+              format_export_column(raw_value, format)
+            elsif column.association
+              if column.association.collection?
+                format_plural_association_export_column(raw_value)
+              else
+                format_singular_association_export_column(raw_value)
+              end
             end
-          end
+          [value, column.export_options&.dig(format)]
         end
       end
 
