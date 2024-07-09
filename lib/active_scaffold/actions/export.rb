@@ -72,7 +72,7 @@ module ActiveScaffold::Actions
       pkg = Axlsx::Package.new
       pkg.workbook.add_worksheet(name: worksheet_name) do |sheet|
         styles = @export_columns.collect { |column| view_context.export_column_header_style(column, :xlsx) }
-        widths = styles.collect { |style| style[:width] || :auto }
+        widths = @export_columns.map.with_index { |column, i| styles.dig(i, :width) || column.export_options&.dig(:xlsx, :width) || :auto }
         unless params[:skip_header]
           styles.map! { |style| pkg.workbook.styles.add_style style if style }
           sheet.add_row(@export_columns.collect { |column| view_context.format_export_column_header_name(column) }, style: styles, widths: widths)
