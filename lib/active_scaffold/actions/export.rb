@@ -91,6 +91,7 @@ module ActiveScaffold::Actions
           end
         end
       end
+      customize_xlsx(pkg)
       stream = pkg.to_stream # when adding rows to sheet, they won't pass to this stream if declared before. axlsx issue?
       self.response_body = Enumerator.new do |y|
         y << stream.read
@@ -101,6 +102,9 @@ module ActiveScaffold::Actions
       active_scaffold_config.label.
         gsub(/[#{Regexp.quote Axlsx::WORKSHEET_NAME_FORBIDDEN_CHARS.join}]/, options[:replace] || '-').
         truncate(Axlsx::WORKSHEET_MAX_NAME_LENGTH, options)
+    end
+
+    def customize_xlsx(package)
     end
 
     def export_columns
