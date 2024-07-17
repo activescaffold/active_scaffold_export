@@ -1,7 +1,7 @@
 # Active Scaffold Export
-### An [active scaffold](https://github.com/activescaffold/active_scaffold) addon to let it export data in CSV or XLSX format
+An [active scaffold](https://github.com/activescaffold/active_scaffold) addon to let it export data in CSV or XLSX format
 
-####How to?
+### How to?
 Easy. First get [active scaffold](https://github.com/activescaffold/active_scaffold) if you haven't yet. 
 Then, add this to your Gemfile:
 ```
