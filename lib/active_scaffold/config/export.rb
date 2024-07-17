@@ -3,7 +3,15 @@ module ActiveScaffold::Config
     self.crud_type = :read
 
     def initialize(core_config)
+      super
       @core = core_config
+      self.show_form = self.class.show_form
+      self.allow_full_download = self.class.allow_full_download
+      self.force_quotes = self.class.force_quotes
+      self.default_full_download = self.class.default_full_download
+      self.default_delimiter = self.class.default_delimiter
+      self.default_skip_header = self.class.default_skip_header
+      self.default_file_format = self.class.default_file_format
       @formats = [:csv, :xlsx]
     end
 
@@ -30,44 +38,62 @@ module ActiveScaffold::Config
       end
     end
 
-    attr_writer :show_form, :allow_full_download, :force_quotes, :default_full_download, :default_delimiter, :default_skip_header, :default_deselected_columns, :default_file_format
-    def show_form
-      self.show_form = @core.export_show_form if @show_form.nil?
-      @show_form
-    end
-    def allow_full_download
-      self.allow_full_download = @core.export_allow_full_download if @allow_full_download.nil?
-      @allow_full_download
-    end
-    def force_quotes
-      self.force_quotes = @core.export_force_quotes if @force_quotes.nil?
-      @force_quotes
-    end
-    def default_full_download
-      self.default_full_download = @core.export_default_full_download if @default_full_download.nil?
-      @default_full_download
-    end
-    def default_delimiter
-      self.default_delimiter = @core.export_default_delimiter if @default_delimiter.nil?
-      @default_delimiter
-    end
-    def default_skip_header
-      self.default_skip_header = @core.export_default_skip_header if @default_skip_header.nil?
-      @default_skip_header
-    end
+    # whether open a form to allow selecting columns and format settings, or export directly with the defined settings in the controller
+    cattr_accessor :show_form, instance_accessor: false
+    @@show_form = true
+
+    # whether user can ask for full or page export, or default is forced
+    cattr_accessor :allow_full_download, instance_accessor: false
+    @@allow_full_download = true
+
+    # force_quotes option for CSV library
+    cattr_accessor :force_quotes, instance_accessor: false
+    @@force_quotes = false
+
+    # default setting for full export or page export, it can be changed in the form if show_form is enabled
+    cattr_accessor :default_full_download, instance_accessor: false
+    @@default_full_download = true
+
+    # default column separator for CSV, it can be changed in the form if show_form is enabled
+    cattr_accessor :default_delimiter, instance_accessor: false
+    @@default_delimiter = ','
+
+    # wheter export a header (false) or skip exporting a header (true), it can be changed in the form if show_form is enabled
+    cattr_accessor :default_skip_header, instance_accessor: false
+    @@default_skip_header = false
+
+    # default file format to export, it can be changed in the form if show_form is enabled
+    cattr_accessor :default_file_format, instance_accessor: false
+    @@default_file_format = Gem::Specification::find_all_by_name('caxlsx').any? ? 'xlsx' : 'csv'
+
+    # instance-level configuration
+    # ----------------------------
+
+    # whether open a form to allow selecting columns and format settings, or export directly with the defined settings in the controller
+    attr_accessor :show_form
+
+    # whether user can ask for full or page export, or default is forced
+    attr_accessor :allow_full_download
+
+    # force_quotes option for CSV library
+    attr_accessor :force_quotes
+
+    # default setting for full export or page export, it can be changed in the form if show_form is enabled
+    attr_accessor :default_full_download
+
+    # default column separator for CSV, it can be changed in the form if show_form is enabled
+    attr_accessor :default_delimiter
+
+    # wheter export a header (false) or skip exporting a header (true), it can be changed in the form if show_form is enabled
+    attr_accessor :default_skip_header
+
+    # default file format to export, it can be changed in the form if show_form is enabled
+    attr_accessor :default_file_format
+
+    attr_writer :default_deselected_columns
     def default_deselected_columns
       self.default_deselected_columns = [] if @default_deselected_columns.nil?
       @default_deselected_columns
-    end
-    def default_file_format
-      if @core.export_xlsx_avaliable
-        self.default_file_format = @default_file_format || 'xlsx'
-      else
-        self.default_file_format = @default_file_format || @core.export_default_file_format
-      end
-    end
-    def xlsx_present?
-      Gem::Specification::find_all_by_name('axlsx_rails').any?
     end
 
     columns_accessor :columns
