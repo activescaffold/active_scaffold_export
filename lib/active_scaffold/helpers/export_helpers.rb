@@ -24,9 +24,9 @@ module ActiveScaffold
               format_export_column(raw_value, format)
             elsif column.association
               if column.association.collection?
-                format_plural_association_export_column(raw_value)
+                format_plural_association_export_column(raw_value, format)
               else
-                format_singular_association_export_column(raw_value)
+                format_singular_association_export_column(raw_value, format)
               end
             end
           [value, column.export_options&.dig(format)]
@@ -63,11 +63,11 @@ module ActiveScaffold
         end
       end
 
-      def format_singular_association_export_column(association_record)
+      def format_singular_association_export_column(association_record, format)
         format_value(association_record.to_label)
       end
 
-      def format_plural_association_export_column(association_records)
+      def format_plural_association_export_column(association_records, format)
         firsts = association_records.first(4).collect { |v| v.to_label }
         firsts[3] = ' ' if firsts.length == 4
         format_value(firsts.join(','))
