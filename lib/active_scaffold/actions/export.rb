@@ -150,12 +150,8 @@ module ActiveScaffold::Actions
     def export_file_name
       filename = self.controller_name.clone
 
-      if params[:format]
-        if params[:format].to_sym == :xlsx
-          filename << '.xlsx'
-        elsif params[:format].to_sym == :csv
-          filename << '.csv'
-        end
+      if params[:format] && active_scaffold_config.export.formats.map(&:to_s).include?(params[:format])
+        filename << ".#{params[:format]}"
       else
         filename << ".#{active_scaffold_config.export.default_file_format}"
       end
