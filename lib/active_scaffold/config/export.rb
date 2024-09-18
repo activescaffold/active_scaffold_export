@@ -90,9 +90,12 @@ module ActiveScaffold::Config
     # default file format to export, it can be changed in the form if show_form is enabled
     attr_accessor :default_file_format
 
-    attr_writer :default_deselected_columns
+    def default_deselected_columns=(val)
+      @default_deselected_columns = ActiveScaffold::DataStructures::Set.new(*val)
+    end
+
     def default_deselected_columns
-      self.default_deselected_columns = [] if @default_deselected_columns.nil?
+      self.default_deselected_columns = ActiveScaffold::DataStructures::Set.new if @default_deselected_columns.nil?
       @default_deselected_columns
     end
 
