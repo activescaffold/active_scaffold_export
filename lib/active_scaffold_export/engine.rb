@@ -15,6 +15,9 @@ module ActiveScaffoldExport
 
     initializer 'active_scaffold_export.extensions' do
       ActiveScaffold::DataStructures::Column.send :include, ActiveScaffoldExport::Column
+      if defined? ActiveScaffold::DataStructures::ProxyColumn
+        ActiveScaffold::DataStructures::ProxyColumn.send :include, ActiveScaffoldExport::Column
+      end
     end
   end
 end

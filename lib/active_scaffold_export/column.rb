@@ -1,5 +1,8 @@
 module ActiveScaffoldExport
   module Column
-    attr_accessor :export_options
+    extend ActiveSupport::Concern
+    included do
+      attr_accessor :export_options
+    end
   end
 end
