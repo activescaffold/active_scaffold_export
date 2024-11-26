@@ -7,21 +7,19 @@ Then, add this to your Gemfile:
 ```
 gem 'active_scaffold_export'
 ```
-if you're using REE or Ruby 1.8.7, you need to add backports gem as well as fastercsv since REE lacks ruby 1.9 streaming features and fastercsv is in core in 1.9
-```
-gem 'backports'
-gem 'fastercsv'
-```
-if you want xlsx format, add:
+
+If you want xlsx format, add:
 ```
 gem 'caxlsx_rails'
 ```
-if that gem is present, XLSX will be used by default. 
+
+If that gem is present, XLSX will be used by default. 
 You can change this by adding to active scaffold config:
 ```
 conf.export.default_file_format = 'csv' # or 'xlsx' 
 ```
-read important notes at the bottom about xlsx.
+
+Read important notes at the bottom about xlsx.
 
 Remember to bundle install.
 Add to application.css:
