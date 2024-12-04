@@ -1,10 +1,9 @@
 <% export_config = active_scaffold_config.export %>
 <h3><%=as_(:columns_for_export)%></h3>
-<% if ActiveScaffold.js_framework == :jquery # TODO: use JS asset instead of inline JS %>
+<%# TODO: use JS asset instead of inline JS %>
 <%= link_to as_(:select_all), '#', onclick: 'jQuery(".columnCheckbox").prop("checked", true); return false', class: 'active-scaffold-footer' %>
  |
 <%= link_to as_(:select_none), '#', onclick: 'jQuery(".columnCheckbox").prop("checked", false); return false', class: 'active-scaffold-footer' %>
-<% end %>
 <div class="columns checkbox-list">
 <% export_config.columns.each_column do |column| -%>
   <div class="column checkbox-wrapper">
