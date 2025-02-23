@@ -95,7 +95,7 @@ module ActiveScaffold::Config
     end
 
     def default_deselected_columns
-      self.default_deselected_columns = ActiveScaffold::DataStructures::Set.new if @default_deselected_columns.nil?
+      @default_deselected_columns ||= ActiveScaffold::DataStructures::Set.new unless frozen?
       @default_deselected_columns
     end
 
@@ -103,6 +103,22 @@ module ActiveScaffold::Config
 
     def multipart?
       false
+    end
+
+    UserSettings.class_eval do
+      user_attr :show_form, :allow_full_download, :force_quotes, :default_file_format,
+                :default_delimiter, :default_skip_header, :default_file_format
+
+      def default_deselected_columns=(val)
+        @default_deselected_columns = ActiveScaffold::DataStructures::Set.new(*val)
+      end
+
+      def default_deselected_columns
+        if @default_deselected_columns.nil? && @conf.default_deselected_columns
+          return @conf.default_deselected_columns
+        end
+        @default_deselected_columns ||= ActiveScaffold::DataStructures::Set.new
+      end
     end
   end
 end
