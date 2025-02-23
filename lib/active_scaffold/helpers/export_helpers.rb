@@ -12,10 +12,10 @@ module ActiveScaffold
       def get_export_column_value(record, column, format)
         if (method = export_column_override(column))
           value, options = send(method, record, format)
-          [value, options || column.export_options&.dig(format)]
+          [value, options || export_column_style(column, format)]
         elsif column.list_ui && (method = override_export_ui(column.list_ui))
           value, options = send(method, record, column, format, ui_options: column.list_ui_options || column.options)
-          [value, options || column.export_options&.dig(format)]
+          [value, options || export_column_style(column, format)]
         else
           raw_value = record.send(column.name)
 
@@ -29,8 +29,13 @@ module ActiveScaffold
                 format_singular_association_export_column(raw_value, format)
               end
             end
-          [value, column.export_options&.dig(format)]
+          [value, export_column_style(column, format)]
         end
+      end
+
+      def export_column_style(column, format)
+        style = column.export_options&.dig(format)
+        format = :xlsx && style.frozen? ? style.deep_dup : style
       end
 
       def export_column_override(column)
