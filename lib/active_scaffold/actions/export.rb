@@ -40,14 +40,15 @@ module ActiveScaffold::Actions
       # with field_search against a relation column, and that relation column is
       # not included in the set of export columns.
       @list_columns = @export_columns
+      @find_options = find_options_for_export
 
       # this is required if you want this to work with IE
       if request.env['HTTP_USER_AGENT'] =~ /msie/i
-        response.headers['Pragma'] = "public"
-        response.headers['Cache-Control'] = "no-cache, must-revalidate, post-check=0, pre-check=0"
-        response.headers['Expires'] = "0"
+        response.headers['pragma'] = "public"
+        response.headers['cache-control'] = "no-cache, must-revalidate, post-check=0, pre-check=0"
+        response.headers['expires'] = "0"
       end
-      response.headers['Content-Disposition'] = "attachment; filename=#{export_file_name}"
+      response.headers['content-disposition'] = "attachment; filename=#{export_file_name}"
 
       respond_to_action(:export)
     end
@@ -55,10 +56,11 @@ module ActiveScaffold::Actions
     protected
 
     def export_respond_to_csv
-      response.headers['Content-type'] = Mime[:csv]
+      response.headers['content-type'] = Mime[:csv]
+      response.headers['last-modified'] = '0'
       # start streaming output
       self.response_body = Enumerator.new do |y|
-        find_items_for_export do |records|
+        find_items_for_export(@find_options) do |records|
           @records = records
           str = render_to_string :partial => 'export', :layout => false, :formats => [:csv]
           y << str
@@ -68,7 +70,8 @@ module ActiveScaffold::Actions
     end
 
     def export_respond_to_xlsx
-      response.headers['Content-type'] = Mime[:xlsx]
+      response.headers['content-type'] = Mime[:xlsx]
+      response.headers['last-modified'] = '0'
       pkg = Axlsx::Package.new
       pkg.workbook.add_worksheet(name: worksheet_name) do |sheet|
         styles = @export_columns.collect { |column| view_context.export_column_header_style(column, :xlsx) }
@@ -77,7 +80,7 @@ module ActiveScaffold::Actions
           styles.map! { |style| pkg.workbook.styles.add_style style if style }
           sheet.add_row(@export_columns.collect { |column| view_context.format_export_column_header_name(column) }, style: styles, widths: widths)
         end
-        find_items_for_export do |records|
+        find_items_for_export(@find_options) do |records|
           records.each do |record|
             row = []
             styles = []
@@ -116,31 +119,29 @@ module ActiveScaffold::Actions
       @export_columns += sorting_columns
     end
 
-    # The actual algorithm to do the export
-    def find_items_for_export(&block)
-      find_options = { :sorting =>
-        active_scaffold_config.list.user.sorting.nil? ?
-          active_scaffold_config.list.sorting : active_scaffold_config.list.user.sorting,
-        :pagination => true
-      }
+    def find_options_for_export
+      find_options = {sorting: active_scaffold_config.list.sorting, pagination: true}
       do_search rescue nil
-      params[:segment_id] = session[:segment_id]
-      do_segment_search rescue nil
 
       if params[:full_download] == 'true'
-        find_options.merge!({
-          :per_page => 3000,
-          :page => 1
-        })
+        find_options.merge!(per_page: 3000, page: 1)
+      else
+        find_options.merge!(
+          pagination: active_scaffold_config.list.pagination,
+          per_page: active_scaffold_config.list.user.per_page,
+          page: active_scaffold_config.list.user.page
+        )
+      end
+      find_options
+    end
+
+    # The actual algorithm to do the export
+    def find_items_for_export(find_options, &block)
+      if params[:full_download] == 'true'
         find_page(find_options).pager.each do |page|
           yield page.items
         end
       else
-        find_options.merge!({
-          :pagination => active_scaffold_config.list.pagination,
-          :per_page => active_scaffold_config.list.user.per_page,
-          :page => active_scaffold_config.list.user.page
-        })
         yield find_page(find_options).items
       end
     end
