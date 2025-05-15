@@ -5,9 +5,12 @@
  |
 <%= link_to as_(:select_none), '#', onclick: 'jQuery(".columnCheckbox").prop("checked", false); return false', class: 'active-scaffold-footer' %>
 <div class="columns checkbox-list">
-<% export_config.columns.each_column do |column| -%>
+<% export_columns_names(true).each_column do |column| -%>
   <div class="column checkbox-wrapper">
-    <%= content_tag(:label, check_box_tag("export_columns[#{column.name}]", 1, !export_config.default_deselected_columns.include?(column.name), :class => 'columnCheckbox') + "&nbsp;#{column.label}".html_safe) %>
+    <label>
+      <%= check_box_tag("export_columns[#{column.name}]", 1, !export_config.default_deselected_columns.include?(column.name), :class => 'columnCheckbox') %>
+      <%= column_heading_label(column) %>
+    </label>
   </div>
 <% end -%>
 &nbsp;

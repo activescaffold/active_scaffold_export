@@ -16,6 +16,8 @@ module ActiveScaffold
         elsif column.list_ui && (method = override_export_ui(column.list_ui))
           value, options = send(method, record, column, format, ui_options: column.list_ui_options || column.options)
           [value, options || export_column_style(column, format)]
+        elsif grouped_search? && column == search_group_column && search_group_function
+          [format_grouped_search_column(record[column.name], column.options), export_column_style(column, format)]
         else
           raw_value = record.send(column.name)
 
@@ -39,7 +41,7 @@ module ActiveScaffold
       end
 
       def export_column_override(column)
-        override_helper column, 'export_column'
+        override_helper column, grouped_search? ? 'grouped_export_column' : 'export_column'
       end
 
       # the naming convention for overriding column types with helpers
@@ -81,7 +83,7 @@ module ActiveScaffold
       ## This helper can be overridden to change the name of the headers
       # For instance, you might want column.name.to_s.humanize
       def format_export_column_header_name(column)
-        column.label
+        column_heading_label column
       end
 
       ## This helper can be overridden to change the style of the headers

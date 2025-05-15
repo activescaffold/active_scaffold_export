@@ -3,6 +3,7 @@ module ActiveScaffold::Actions
     def self.included(base)
       base.before_action :export_authorized?, :only => [:export]
       base.before_action :show_export_authorized?, :only => [:show_export]
+      base.helper_method :export_columns_names
     end
 
     # display the customization form or skip directly to export
@@ -23,7 +24,7 @@ module ActiveScaffold::Actions
       export_config = active_scaffold_config.export
       if params[:export_columns].nil?
         export_columns = {}
-        export_config.columns.each { |col| export_columns[col.to_sym] = 1 }
+        export_columns_names.each { |col| export_columns[col.to_sym] = 1 }
         options = {
           :export_columns => export_columns,
           :full_download => export_config.default_full_download.to_s,
@@ -33,14 +34,14 @@ module ActiveScaffold::Actions
         params.merge!(options)
       end
 
-      set_includes_for_columns(:export)
+      set_includes_for_columns(:export) # will call export_columns which will set @export_columns
       @export_config = export_config
       # Make sure active_scaffold's find_page is dealing with the same list of
       # columns. Prevents an invalid SQL query when exporting after filtering
       # with field_search against a relation column, and that relation column is
       # not included in the set of export columns.
       @list_columns = @export_columns
-      @find_options = find_options_for_export
+      @page = find_page(find_options_for_export)
 
       # this is required if you want this to work with IE
       if request.env['HTTP_USER_AGENT'] =~ /msie/i
@@ -60,7 +61,7 @@ module ActiveScaffold::Actions
       response.headers['last-modified'] = '0'
       # start streaming output
       self.response_body = Enumerator.new do |y|
-        find_items_for_export(@find_options) do |records|
+        find_items_for_export do |records|
           @records = records
           str = render_to_string :partial => 'export', :layout => false, :formats => [:csv]
           y << str
@@ -80,7 +81,7 @@ module ActiveScaffold::Actions
           styles.map! { |style| pkg.workbook.styles.add_style style if style }
           sheet.add_row(@export_columns.collect { |column| view_context.format_export_column_header_name(column) }, style: styles, widths: widths)
         end
-        find_items_for_export(@find_options) do |records|
+        find_items_for_export do |records|
           records.each do |record|
             row = []
             styles = []
@@ -112,11 +113,21 @@ module ActiveScaffold::Actions
 
     def export_columns
       return @export_columns if defined? @export_columns
-      @export_columns = active_scaffold_config.export.columns.reject { |col| params[:export_columns][col.to_sym].nil? }
+      @export_columns = export_columns_names.reject { |col| params[:export_columns][col.to_sym].nil? }
       sorting = active_scaffold_config.list.user.sorting || active_scaffold_config.list.sorting
       sorting_columns = sorting.reject { |col, _| @export_columns.include?(col.name) }.map(&:first)
       @export_columns.map! { |col| active_scaffold_config.columns[col] }
       @export_columns += sorting_columns
+    end
+
+    def export_columns_names(action_columns = false)
+      if grouped_search?
+        list_columns_names.then do |cols|
+          action_columns ? active_scaffold_config.build_action_columns(:export, cols) : cols
+        end
+      else
+        active_scaffold_config.export.columns
+      end
     end
 
     def find_options_for_export
@@ -136,13 +147,13 @@ module ActiveScaffold::Actions
     end
 
     # The actual algorithm to do the export
-    def find_items_for_export(find_options, &block)
+    def find_items_for_export(&block)
       if params[:full_download] == 'true'
-        find_page(find_options).pager.each do |page|
+        @page.pager.each do |page|
           yield page.items
         end
       else
-        yield find_page(find_options).items
+        yield @page.items
       end
     end
 
