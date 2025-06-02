@@ -71,5 +71,11 @@ def worksheet_name(options = {})
 end
 ```
 
+### Grouped search
+
+Export supports grouped search from field_search action. When grouped search is used, instead of exporting the normal columns, only the listed columns will be exported, the ones in `conf.list.columns` with calculation, or the ones in `conf.field_search.grouped_columns`. In this case, the normal helper overrides won't be used, and will use `grouped_export_column` suffix instead.
+
+## Contact
+
 For contact, help, support, comments, please use Active Scaffold official mailing list  activescaffold@googlegroups.com
 
