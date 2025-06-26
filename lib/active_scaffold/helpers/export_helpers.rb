@@ -10,6 +10,7 @@ module ActiveScaffold
       # format_singular_association_export_column(association_record)
       # format_plural_association_export_column(association_records)
       def get_export_column_value(record, column, format)
+        return unless record.authorized_for?(crud_type: :read, column: column.name)
         if (method = export_column_override(column))
           value, options = send(method, record, format)
           [value, options || export_column_style(column, format)]
