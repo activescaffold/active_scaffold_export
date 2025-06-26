@@ -37,7 +37,7 @@ module ActiveScaffold
 
       def export_column_style(column, format)
         style = column.export_options&.dig(format)
-        format = :xlsx && style.frozen? ? style.deep_dup : style
+        format == :xlsx && style.frozen? ? style.deep_dup : style
       end
 
       def export_column_override(column)
