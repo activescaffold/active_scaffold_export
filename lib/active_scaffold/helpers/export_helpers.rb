@@ -94,6 +94,28 @@ module ActiveScaffold
         end
       end
 
+      def export_options
+        export_config = active_scaffold_config.export
+        rows = []
+        rows << [
+          [check_box_tag('skip_header', 1, export_config.default_skip_header), :omit_header],
+          [text_field_tag('delimiter', export_config.default_delimiter, :size => 1, :maxlength => 1), :delimiter]
+        ]
+        if export_config.allow_full_download
+          rows << [
+            [radio_button_tag('full_download', false, !export_config.default_full_download), :this_page],
+            [radio_button_tag('full_download', true, export_config.default_full_download), :all_pages]
+          ]
+        end
+        if export_config.formats.many?
+          rows << export_config.formats.map do |format|
+            [radio_button_tag('format', format, export_config.default_file_format.to_sym == format), format.upcase.to_s]
+          end
+        else
+          rows << [hidden_field_tag('format', export_config.formats[0])]
+        end
+      end
+
     end
   end
 end

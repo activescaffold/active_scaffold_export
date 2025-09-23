@@ -1,4 +1,3 @@
-<% export_config = active_scaffold_config.export %>
 <h3><%=as_(:columns_for_export)%></h3>
 <%# TODO: use JS asset instead of inline JS %>
 <%= link_to as_(:select_all), '#', onclick: 'jQuery(".columnCheckbox").prop("checked", true); return false', class: 'active-scaffold-footer' %>
@@ -8,7 +7,7 @@
 <% export_columns_names(true).each_column do |column| -%>
   <div class="column checkbox-wrapper">
     <label>
-      <%= check_box_tag("export_columns[#{column.name}]", 1, !export_config.default_deselected_columns.include?(column.name), :class => 'columnCheckbox') %>
+      <%= check_box_tag("export_columns[#{column.name}]", 1, !active_scaffold_config.export.default_deselected_columns.include?(column.name), :class => 'columnCheckbox') %>
       <%= column_heading_label(column) %>
     </label>
   </div>
@@ -18,30 +17,17 @@
 <div class="separator"></div>
 <h3><%=as_(:options)%></h3>
 <div class="options checkbox-list">
-  <div class="option checkbox-wrapper">
-    <%= content_tag(:label, check_box_tag('skip_header', 1, export_config.default_skip_header) + " #{as_(:omit_header)}".html_safe) %>
-  </div>
-  <div class="option checkbox-wrapper">
-    <%= content_tag(:label, text_field_tag('delimiter', export_config.default_delimiter, :size => 1, :maxlength => 1) + " #{as_(:delimiter)}".html_safe) %>
-  </div>
-  <div class="separator"></div>
-  <% if export_config.allow_full_download %>
-  <div class="option checkbox-wrapper">
-    <%= content_tag(:label, radio_button_tag('full_download', false, !export_config.default_full_download) + " #{as_(:this_page)}".html_safe) %>
-  </div>
-  <div class="option checkbox-wrapper">
-    <%= content_tag(:label, radio_button_tag('full_download', true, export_config.default_full_download) + " #{as_(:all_pages)}".html_safe) %>
-  </div>
-  <div class="separator"></div>
-  <% end %>
-  <% if export_config.formats.many? %>
-  <% export_config.formats.each do |format| %>
-  <div class="option checkbox-wrapper">
-    <%= content_tag(:label, safe_join([radio_button_tag('format', format, export_config.default_file_format.to_sym == format), format.upcase], ' ')) %>
-  </div>
-  <% end %>
-  <% else %>
-  <%= hidden_field_tag 'format', export_config.formats[0] %>
+  <% export_options.each do |row_optionss| %>
+    <% row_optionss.each do |(option, label)| %>
+      <div class="option checkbox-wrapper">
+        <% if label %>
+        <%= content_tag(:label, safe_join([option, label.is_a?(Symbol) ? as_(label) : label], ' ')) %>
+        <% else %>
+        <%= option %>
+        <% end %>
+      </div>
+    <% end %>
+    <div class="separator"></div>
   <% end %>
   &nbsp;
 </div>
