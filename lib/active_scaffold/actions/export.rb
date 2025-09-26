@@ -163,7 +163,7 @@ module ActiveScaffold::Actions
     # The default name of the downloaded file.
     # You may override the method to specify your own file name generation.
     def export_file_name
-      filename = self.controller_name.clone
+      filename = self.controller_name.dup
 
       if params[:format] && active_scaffold_config.export.formats.map(&:to_s).include?(params[:format])
         filename << ".#{params[:format]}"
