@@ -1,0 +1,9 @@
+en:
+  active_scaffold:
+    all_pages: 'All pages'
+    columns_for_export: 'Columns for export'
+    export: 'Export'
+    export_options: 'Options'
+    export_pages: 'Pages'
+    export_format: 'Format'
+    this_page: 'This page'

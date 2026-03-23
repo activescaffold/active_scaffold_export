@@ -113,9 +113,9 @@ module ActiveScaffold::Actions
 
     def export_columns
       return @export_columns if defined? @export_columns
-      @export_columns = export_columns_names.reject do |col|
-        params[:export_columns][col.to_sym].nil? ||
-          !active_scaffold_config.model.authorized_for?(crud_type: :read, column: col.to_sym)
+      logger.debug @export_columns.inspect
+      @export_columns = export_columns_names.select do |col|
+        params[:export_columns].include?(col.to_s) && active_scaffold_config.model.authorized_for?(crud_type: :read, column: col.to_sym)
       end
       sorting = active_scaffold_config.list.user.sorting || active_scaffold_config.list.sorting
       sorting_columns = sorting.reject { |col, _| @export_columns.include?(col.name) }.map(&:first)

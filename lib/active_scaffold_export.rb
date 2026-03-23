@@ -24,3 +24,5 @@ end
 
 ActionView::Base.send(:include, ActiveScaffold::Helpers::ExportHelpers)
 ActiveScaffold.stylesheets << 'active_scaffold_export'
+ActiveScaffold.ui_elements[:export_option] = {tag: :div, attributes: {class: 'option-wrapper'}}
+ActiveScaffold.ui_elements[:export_option_row] = {tag: :div, attributes: {class: 'option-row'}}
