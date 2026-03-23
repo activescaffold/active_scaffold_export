@@ -1,4 +1,4 @@
-<h3><%=as_(:columns_for_export)%></h3>
+<h5><%=as_(:columns_for_export)%></h5>
 <%# TODO: use JS asset instead of inline JS %>
 <%= link_to as_(:select_all), '#', onclick: 'jQuery(".columnCheckbox").prop("checked", true); return false', class: 'active-scaffold-footer' %>
  |
@@ -15,7 +15,7 @@
 &nbsp;
 </div>
 <div class="separator"></div>
-<h3><%=as_(:options)%></h3>
+<h5><%=as_(:options)%></h5>
 <div class="options checkbox-list">
   <% export_options.each do |row_optionss| %>
     <% row_optionss.each do |(option, label)| %>
