@@ -1,8 +1,8 @@
 module ActiveScaffold::Actions
   module Export
     def self.included(base)
-      base.before_action :export_authorized?, :only => [:export]
-      base.before_action :show_export_authorized?, :only => [:show_export]
+      base.before_action :export_authorized_filter, :only => [:export]
+      base.before_action :show_export_authorized_filter, :only => [:show_export]
       base.helper_method :export_columns_names
     end
 
