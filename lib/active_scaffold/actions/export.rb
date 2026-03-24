@@ -10,11 +10,9 @@ module ActiveScaffold::Actions
     def show_export
       @export_config = active_scaffold_config.export
       respond_to do |wants|
-        wants.html do
-          render(:partial => 'show_export', :layout => true)
-        end
+        wants.html
         wants.js do
-          render(:partial => 'show_export', :layout => false)
+          render partial: 'show_export'
         end
       end
     end
@@ -180,8 +178,16 @@ module ActiveScaffold::Actions
       authorized_for?(:action => :read)
     end
 
+    def export_authorized_filter
+      raise ActiveScaffold::ActionNotAllowed unless export_authorized?
+    end
+
     def show_export_authorized?
       export_authorized?
+    end
+
+    def show_export_authorized_filter
+      raise ActiveScaffold::ActionNotAllowed unless show_export_authorized?
     end
 
     def export_formats
