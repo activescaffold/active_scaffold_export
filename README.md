@@ -21,11 +21,7 @@ conf.export.default_file_format = 'csv' # or 'xlsx'
 
 Read important notes at the bottom about xlsx.
 
-Remember to bundle install.
-Add to application.css:
-```
- *= require active_scaffold_export
-```
+Remember to run `bundle install`. ActiveScaffold automatically includes the plugin stylesheet; no entry in `application.css` is needed.
 
 Now let's add it to controller, inside active_scaffold config block:
 ```ruby
@@ -86,4 +82,3 @@ Export supports grouped search from field_search action. When grouped search is 
 ## Contact
 
 For contact, help, support, comments, please use Active Scaffold official mailing list  activescaffold@googlegroups.com
-
