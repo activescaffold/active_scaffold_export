@@ -21,10 +21,8 @@ module ActiveScaffold::Actions
     def export
       export_config = active_scaffold_config.export
       if params[:export_columns].nil?
-        export_columns = {}
-        export_columns_names.each { |col| export_columns[col.to_sym] = 1 }
         options = {
-          :export_columns => export_columns,
+          :export_columns => export_columns_names.map(&:to_s),
           :full_download => export_config.default_full_download.to_s,
           :delimiter => export_config.default_delimiter,
           :skip_header => export_config.default_skip_header.to_s
@@ -111,9 +109,16 @@ module ActiveScaffold::Actions
 
     def export_columns
       return @export_columns if defined? @export_columns
-      @export_columns = export_columns_names.reject do |col|
-        params[:export_columns][col.to_sym].nil? ||
-          !active_scaffold_config.model.authorized_for?(crud_type: :read, column: col.to_sym)
+      selected_columns = if params[:export_columns].respond_to?(:each_pair)
+        params[:export_columns].each_pair.filter_map { |name, selected| name.to_s if selected.present? }
+      else
+        Array(params[:export_columns]).reject(&:blank?).map(&:to_s)
+      end
+      available_columns = export_columns_names.map(&:to_s)
+      @export_columns = selected_columns.uniq.filter_map do |col|
+        next unless available_columns.include?(col)
+        next unless active_scaffold_config.model.authorized_for?(crud_type: :read, column: col.to_sym)
+        col
       end
       sorting = active_scaffold_config.list.user.sorting || active_scaffold_config.list.sorting
       sorting_columns = sorting.reject { |col, _| @export_columns.include?(col.name) }.map(&:first)

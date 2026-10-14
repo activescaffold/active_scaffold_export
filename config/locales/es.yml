@@ -1,0 +1,9 @@
+es:
+  active_scaffold:
+    all_pages: Todas las páginas
+    columns_for_export: Columnas a exportar
+    export: Exportar
+    export_format: Formato
+    export_options: Opciones
+    export_pages: Páginas
+    this_page: Esta página

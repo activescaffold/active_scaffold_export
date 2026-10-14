@@ -12,6 +12,7 @@ module ActiveScaffold::Config
       self.default_delimiter = self.class.default_delimiter
       self.default_skip_header = self.class.default_skip_header
       self.default_file_format = self.class.default_file_format
+      self.draggable = self.class.draggable
       @formats = [:csv, :xlsx]
     end
 
@@ -66,6 +67,10 @@ module ActiveScaffold::Config
     cattr_accessor :default_file_format, instance_accessor: false
     @@default_file_format = Gem::Specification::find_all_by_name('caxlsx').any? ? 'xlsx' : 'csv'
 
+    # whether selected export columns can be reordered with drag and drop
+    cattr_accessor :draggable, instance_accessor: false
+    @@draggable = false
+
     # instance-level configuration
     # ----------------------------
 
@@ -89,6 +94,9 @@ module ActiveScaffold::Config
 
     # default file format to export, it can be changed in the form if show_form is enabled
     attr_accessor :default_file_format
+
+    # whether selected export columns can be reordered with drag and drop
+    attr_accessor :draggable
 
     def default_deselected_columns=(val)
       @default_deselected_columns = ActiveScaffold::DataStructures::Set.new(*val)

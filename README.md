@@ -23,6 +23,8 @@ Read important notes at the bottom about xlsx.
 
 Remember to run `bundle install`. ActiveScaffold automatically includes the plugin stylesheet; no entry in `application.css` is needed.
 
+ActiveScaffold Export 3.12 requires ActiveScaffold 4.4 or newer.
+
 Now let's add it to controller, inside active_scaffold config block:
 ```ruby
 conf.actions.add :export
@@ -32,8 +34,24 @@ conf.export.columns = %w(name last_name phone address)
 conf.export.default_deselected_columns = %w(phone address)
 conf.export.default_delimiter = ";"
 conf.export.force_quotes = "true"
+# allow users to drag selected columns into export order
+conf.export.draggable = true
 ```
 And enjoy happy exporting :)
+
+### UI adapter support
+
+The export form uses ActiveScaffold 4.4's standard form elements (`fields_container`, `form_element`, and `form_attribute`) and adds two plugin-specific elements:
+
+* `export_option` wraps one export option.
+* `export_option_row` groups related options.
+
+For example, an adapter can change their classes without overriding the export partial:
+
+```ruby
+ActiveScaffold.add_element_attributes :export_option, class: 'form-check'
+ActiveScaffold.add_element_attributes :export_option_row, class: 'd-flex gap-3'
+```
 
 ### Configuring
 
