@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
     "LICENSE.txt",
     "README.md"
   ]
-  s.files = Dir["{app,lib}/**/*"] + %w[LICENSE.txt README.md]
+  s.files = Dir["{app,config,lib}/**/*"] + %w[LICENSE.txt README.md]
   s.homepage = "http://github.com/active_scaffold/active_scaffold_export"
   s.licenses = ["MIT"]
   s.require_paths = ["lib"]
