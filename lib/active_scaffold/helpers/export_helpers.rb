@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module ActiveScaffold
   module Helpers
     # Helpers that assist with the rendering of a Export Column
@@ -11,28 +13,31 @@ module ActiveScaffold
       # format_plural_association_export_column(association_records)
       def get_export_column_value(record, column, format)
         return unless record.authorized_for?(crud_type: :read, column: column.name)
-        if (method = export_column_override(column))
-          value, options = send(method, record, format)
-          [value, options || export_column_style(column, format)]
-        elsif column.list_ui && (method = override_export_ui(column.list_ui))
-          value, options = send(method, record, column, format, ui_options: column.list_ui_options || column.options)
-          [value, options || export_column_style(column, format)]
-        elsif grouped_search? && column == search_group_column && search_group_function
-          [format_grouped_search_column(record[column.name], column.options), export_column_style(column, format)]
-        else
-          raw_value = record.send(column.name)
 
-          value =
-            if column.association.nil? or column_empty?(raw_value)
-              format_export_column(raw_value, format)
-            elsif column.association
-              if column.association.collection?
-                format_plural_association_export_column(raw_value, format)
-              else
-                format_singular_association_export_column(raw_value, format)
-              end
-            end
-          [value, export_column_style(column, format)]
+        value, options = export_column_value(record, column, format)
+        [value, options || export_column_style(column, format)]
+      end
+
+      def export_column_value(record, column, format)
+        if (method = export_column_override(column))
+          send(method, record, format)
+        elsif column.list_ui && (method = override_export_ui(column.list_ui))
+          send(method, record, column, format, ui_options: column.list_ui_options || column.options)
+        elsif grouped_search? && column == search_group_column && search_group_function
+          [format_grouped_search_column(record[column.name], column.options), nil]
+        else
+          [format_export_record_value(record, column, format), nil]
+        end
+      end
+
+      def format_export_record_value(record, column, format)
+        raw_value = record.send(column.name)
+        return format_export_column(raw_value, format) if column.association.nil? || column_empty?(raw_value)
+
+        if column.association.collection?
+          format_plural_association_export_column(raw_value, format)
+        else
+          format_singular_association_export_column(raw_value, format)
         end
       end
 
@@ -63,7 +68,7 @@ module ActiveScaffold
         if column_empty?(column_value)
           active_scaffold_config.list.empty_field_text
         elsif column_value.is_a?(Time) || column_value.is_a?(Date)
-          l(column_value, :format => :default)
+          l(column_value, format: :default)
         elsif [FalseClass, TrueClass].include?(column_value.class)
           as_(column_value.to_s.to_sym)
         else
@@ -76,7 +81,7 @@ module ActiveScaffold
       end
 
       def format_plural_association_export_column(association_records, format)
-        firsts = association_records.first(4).collect { |v| v.to_label }
+        firsts = association_records.first(4).collect(&:to_label)
         firsts[3] = ' ' if firsts.length == 4
         format_value(firsts.join(','))
       end
@@ -90,7 +95,7 @@ module ActiveScaffold
       ## This helper can be overridden to change the style of the headers
       def export_column_header_style(column, format)
         if format == :xlsx
-          @default_style ||= {sz: 11, b: true, bg_color: "69B5EF", fg_color: "FF", alignment: {horizontal: :center}}
+          @default_style ||= {sz: 11, b: true, bg_color: '69B5EF', fg_color: 'FF', alignment: {horizontal: :center}}
         end
       end
 
@@ -102,7 +107,6 @@ module ActiveScaffold
           [text_field_tag('delimiter', export_config.default_delimiter, size: 1, maxlength: 1, id: nil), :delimiter]
         ]
       end
-
     end
   end
 end

@@ -1,19 +1,22 @@
 <%
-  require 'csv' if RUBY_VERSION >= "1.9"
+  require 'csv'
 
   fcsv_options = {
-    :row_sep => "\n",
-    :col_sep => params[:delimiter],
-    :force_quotes => @export_config.force_quotes,
-    :headers => @export_columns.collect { |column| format_export_column_header_name(column) }
+    row_sep: "\n",
+    col_sep: params[:delimiter],
+    force_quotes: @export_config.force_quotes,
+    headers: @export_columns.collect { |column| format_export_column_header_name(column) }
   }
 
   data = CSV.generate(**fcsv_options) do |csv|
     csv << fcsv_options[:headers] unless params[:skip_header]
     @records.each do |record|
-      csv << @export_columns.collect { |column|
+      csv << @export_columns.collect do |column|
         get_export_column_value(record, column, :csv)&.first
-      }
+      end
     end
   end
--%><%= data.html_safe -%>
+-%>
+<%# CSV is not HTML; it must bypass Action View's HTML escaping. %>
+<%= data.html_safe # rubocop:disable Rails/OutputSafety
+-%>

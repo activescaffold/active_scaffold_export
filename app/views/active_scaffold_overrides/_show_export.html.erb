@@ -1,8 +1,13 @@
-<%= render :partial => "base_form", :locals => {:xhr => false,
-                                                :form_action => :export,
-                                                :url_options => params_for(:action => :export),
-                                                :method => :post,
-                                                :cancel_link => true,
-                                                :headline => as_(:export),
-                                                :body_partial => 'export_form_body',
-                                                :loading => false} %>
+<%
+  form_locals = {
+    xhr: false,
+    form_action: :export,
+    url_options: params_for(action: :export),
+    method: :post,
+    cancel_link: true,
+    headline: as_(:export),
+    body_partial: 'export_form_body',
+    loading: false
+  }
+%>
+<%= render partial: 'base_form', locals: form_locals %>

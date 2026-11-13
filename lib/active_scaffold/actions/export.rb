@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 module ActiveScaffold::Actions
   module Export
     def self.included(base)
-      base.before_action :export_authorized_filter, :only => [:export]
-      base.before_action :show_export_authorized_filter, :only => [:show_export]
+      base.before_action :export_authorized_filter, only: [:export]
+      base.before_action :show_export_authorized_filter, only: [:show_export]
       base.helper_method :export_columns_names
     end
 
@@ -22,10 +24,10 @@ module ActiveScaffold::Actions
       export_config = active_scaffold_config.export
       if params[:export_columns].nil?
         options = {
-          :export_columns => export_columns_names.map(&:to_s),
-          :full_download => export_config.default_full_download.to_s,
-          :delimiter => export_config.default_delimiter,
-          :skip_header => export_config.default_skip_header.to_s
+          export_columns: export_columns_names.map(&:to_s),
+          full_download: export_config.default_full_download.to_s,
+          delimiter: export_config.default_delimiter,
+          skip_header: export_config.default_skip_header.to_s
         }
         params.merge!(options)
       end
@@ -39,14 +41,7 @@ module ActiveScaffold::Actions
       @list_columns = @export_columns
       @page = find_page(find_options_for_export)
 
-      # this is required if you want this to work with IE
-      if request.env['HTTP_USER_AGENT'] =~ /msie/i
-        response.headers['pragma'] = "public"
-        response.headers['cache-control'] = "no-cache, must-revalidate, post-check=0, pre-check=0"
-        response.headers['expires'] = "0"
-      end
       response.headers['content-disposition'] = "attachment; filename=#{export_file_name}"
-
       respond_to_action(:export)
     end
 
@@ -59,7 +54,7 @@ module ActiveScaffold::Actions
       self.response_body = Enumerator.new do |y|
         find_items_for_export do |records|
           @records = records
-          str = render_to_string :partial => 'export', :layout => false, :formats => [:csv]
+          str = render_to_string partial: 'export', layout: false, formats: [:csv]
           y << str
           params[:skip_header] = 'true' # skip header on the next run
         end
@@ -71,62 +66,86 @@ module ActiveScaffold::Actions
       response.headers['last-modified'] = '0'
       pkg = Axlsx::Package.new
       pkg.workbook.add_worksheet(name: worksheet_name) do |sheet|
-        styles = @export_columns.collect { |column| view_context.export_column_header_style(column, :xlsx) }
-        widths = @export_columns.map.with_index { |column, i| styles.dig(i, :width) || column.export_options&.dig(:xlsx, :width) || :auto }
-        unless params[:skip_header]
-          styles.map! { |style| pkg.workbook.styles.add_style style if style }
-          sheet.add_row(@export_columns.collect { |column| view_context.format_export_column_header_name(column) }, style: styles, widths: widths)
-        end
-        find_items_for_export do |records|
-          records.each do |record|
-            row = []
-            styles = []
-            @export_columns.each do |column|
-              data, style = view_context.get_export_column_value(record, column, :xlsx)
-              style = pkg.workbook.styles.add_style style if style
-              row << data
-              styles << style
-            end
-            sheet.add_row row, style: styles, widths: widths
-          end
-        end
+        populate_xlsx_sheet(pkg, sheet)
       end
       customize_xlsx(pkg)
-      stream = pkg.to_stream # when adding rows to sheet, they won't pass to this stream if declared before. axlsx issue?
+      # Rows added after creating the stream are not included due to an Axlsx limitation.
+      stream = pkg.to_stream
       self.response_body = Enumerator.new do |y|
         y << stream.read
       end
     end
 
-    def worksheet_name(options = {})
-      active_scaffold_config.label.
-        gsub(/[#{Regexp.quote Axlsx::WORKSHEET_NAME_FORBIDDEN_CHARS.join}]/, options[:replace] || '-').
-        truncate(Axlsx::WORKSHEET_MAX_NAME_LENGTH, options)
+    def populate_xlsx_sheet(package, sheet)
+      header_styles = @export_columns.map do |column|
+        view_context.export_column_header_style(column, :xlsx)
+      end
+      widths = xlsx_column_widths(header_styles)
+      add_xlsx_header(package, sheet, header_styles, widths) unless params[:skip_header]
+
+      find_items_for_export do |records|
+        records.each { |record| add_xlsx_record(package, sheet, record, widths) }
+      end
     end
 
-    def customize_xlsx(package)
+    def xlsx_column_widths(header_styles)
+      @export_columns.map.with_index do |column, index|
+        header_styles.dig(index, :width) || column.export_options&.dig(:xlsx, :width) || :auto
+      end
     end
+
+    def add_xlsx_header(package, sheet, header_styles, widths)
+      styles = header_styles.map { |style| package.workbook.styles.add_style(style) if style }
+      headers = @export_columns.map { |column| view_context.format_export_column_header_name(column) }
+      sheet.add_row(headers, style: styles, widths: widths)
+    end
+
+    def add_xlsx_record(package, sheet, record, widths)
+      cells = @export_columns.map do |column|
+        data, style = view_context.get_export_column_value(record, column, :xlsx)
+        style = package.workbook.styles.add_style(style) if style
+        [data, style]
+      end
+      sheet.add_row(cells.map(&:first), style: cells.map(&:last), widths: widths)
+    end
+
+    def worksheet_name(options = {})
+      active_scaffold_config.label
+        .gsub(/[#{Regexp.quote Axlsx::WORKSHEET_NAME_FORBIDDEN_CHARS.join}]/, options[:replace] || '-')
+        .truncate(Axlsx::WORKSHEET_MAX_NAME_LENGTH, options)
+    end
+
+    def customize_xlsx(package); end
 
     def export_columns
       return @export_columns if defined? @export_columns
-      selected_columns = if params[:export_columns].respond_to?(:each_pair)
-        params[:export_columns].each_pair.filter_map { |name, selected| name.to_s if selected.present? }
-      else
-        Array(params[:export_columns]).reject(&:blank?).map(&:to_s)
-      end
-      available_columns = export_columns_names.map(&:to_s)
-      @export_columns = selected_columns.uniq.filter_map do |col|
-        next unless available_columns.include?(col)
-        next unless active_scaffold_config.model.authorized_for?(crud_type: :read, column: col.to_sym)
-        col
-      end
+
+      selected_columns = selected_export_columns
       sorting = active_scaffold_config.list.user.sorting || active_scaffold_config.list.sorting
-      sorting_columns = sorting.reject { |col, _| @export_columns.include?(col.name) }.map(&:first)
-      @export_columns.map! { |col| active_scaffold_config.columns[col] }
-      @export_columns += sorting_columns
+      sorting_columns = sorting.reject { |column, _| selected_columns.include?(column.name) }.map(&:first)
+      @export_columns = selected_columns.map { |column| active_scaffold_config.columns[column] }
+      @export_columns.concat(sorting_columns)
     end
 
-    def export_columns_names(action_columns = false)
+    def selected_export_columns
+      available_columns = export_columns_names.map(&:to_s)
+      requested_export_columns.uniq.select do |column|
+        available_columns.include?(column) &&
+          active_scaffold_config.model.authorized_for?(crud_type: :read, column: column.to_sym)
+      end
+    end
+
+    def requested_export_columns
+      if params[:export_columns].respond_to?(:each_pair)
+        params[:export_columns].each_pair.filter_map do |name, selected|
+          name.to_s if selected.present?
+        end
+      else
+        Array(params[:export_columns]).compact_blank.map(&:to_s)
+      end
+    end
+
+    def export_columns_names(action_columns: false)
       if grouped_search?
         list_columns_names.then do |cols|
           action_columns ? active_scaffold_config.build_action_columns(:export, cols) : cols
@@ -138,7 +157,7 @@ module ActiveScaffold::Actions
 
     def find_options_for_export
       find_options = {sorting: active_scaffold_config.list.sorting, pagination: true}
-      do_search rescue nil
+      do_search if respond_to? :do_search, true
 
       if params[:full_download] == 'true'
         find_options.merge!(per_page: 3000, page: 1)
@@ -153,7 +172,7 @@ module ActiveScaffold::Actions
     end
 
     # The actual algorithm to do the export
-    def find_items_for_export(&block)
+    def find_items_for_export(&)
       if params[:full_download] == 'true'
         @page.pager.each do |page|
           yield page.items
@@ -166,21 +185,22 @@ module ActiveScaffold::Actions
     # The default name of the downloaded file.
     # You may override the method to specify your own file name generation.
     def export_file_name
-      filename = self.controller_name.dup
+      filename = controller_name.dup
 
-      if params[:format] && active_scaffold_config.export.formats.map(&:to_s).include?(params[:format])
-        filename << ".#{params[:format]}"
-      else
-        filename << ".#{active_scaffold_config.export.default_file_format}"
-      end
+      filename <<
+        if params[:format] && active_scaffold_config.export.formats.map(&:to_s).include?(params[:format])
+          ".#{params[:format]}"
+        else
+          ".#{active_scaffold_config.export.default_file_format}"
+        end
 
-      return filename
+      filename
     end
 
     # The default security delegates to ActiveRecordPermissions.
     # You may override the method to customize.
     def export_authorized?
-      authorized_for?(:action => :read)
+      authorized_for?(action: :read)
     end
 
     def export_authorized_filter
@@ -198,6 +218,5 @@ module ActiveScaffold::Actions
     def export_formats
       active_scaffold_config.export.formats
     end
-
   end
 end

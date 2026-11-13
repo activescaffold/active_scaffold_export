@@ -1,0 +1,13 @@
+<%= as_element :form_element, class: 'form-element' do %>
+  <%
+    content = export_options.map do |row_options|
+      row_html = row_options.map do |(option, label)|
+        translated_label = label.is_a?(Symbol) ? as_(label) : label
+        option_with_label = label ? safe_join([option, translated_label], ' ') : option
+        as_element(:export_option, option_with_label)
+      end
+      as_element :export_option_row, safe_join(row_html)
+    end
+  %>
+  <%= form_attribute_html(nil, as_(:export_options), safe_join(content), nil, {}) %>
+<% end %>

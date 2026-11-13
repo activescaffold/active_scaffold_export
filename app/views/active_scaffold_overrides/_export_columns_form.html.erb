@@ -1,0 +1,23 @@
+<%= as_element :form_element, class: 'form-element' do %>
+  <%
+    columns = export_columns_names(action_columns: true).visible_columns
+    selected_columns = columns.map(&:name).reject do |name|
+      export_config.default_deselected_columns.include?(name)
+    end
+    content = active_scaffold_checkbox_list(
+      nil,
+      columns.map { |column| [column_heading_label(column), column.name] },
+      selected_columns,
+      {
+        name: 'export_columns',
+        id: "#{element_form_id(action: :export)}-columns",
+        class: 'columns'
+      },
+      ui_options: {
+        draggable_lists: export_config.draggable,
+        item_options: {class: 'sortable'}
+      }
+    )
+  %>
+  <%= form_attribute_html(nil, as_(:columns_for_export), content, nil, {}) %>
+<% end %>
