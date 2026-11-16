@@ -6,6 +6,12 @@ require 'active_support/core_ext/object/blank'
 require 'active_support/core_ext/object/deep_dup'
 
 module ActiveScaffold
+  module Registry
+    def self.cache(_namespace, value)
+      yield
+    end
+  end
+
   module Helpers
   end
 end
@@ -16,7 +22,8 @@ class ExportHelpersTest < Minitest::Test
   Association = Struct.new(:collection?)
   Column = Struct.new(:name, :association, :list_ui, :list_ui_options, :options, :export_options)
   ListConfig = Struct.new(:empty_field_text)
-  Config = Struct.new(:list)
+  ExportConfig = Struct.new(:default_skip_header, :default_delimiter)
+  Config = Struct.new(:list, :export)
 
   class Record
     def initialize(attributes, denied: [])
@@ -47,7 +54,7 @@ class ExportHelpersTest < Minitest::Test
     attr_reader :localized
 
     def active_scaffold_config
-      Config.new(ListConfig.new('(empty)'))
+      Config.new(ListConfig.new('(empty)'), ExportConfig.new(true, ';'))
     end
 
     def grouped_search?
@@ -56,6 +63,22 @@ class ExportHelpersTest < Minitest::Test
 
     def override_helper(*)
       nil
+    end
+
+    def active_scaffold_export_badge(record, column, format, ui_options:)
+      ["#{record.send(column.name)}-#{format}-#{ui_options[:badge]}", nil]
+    end
+
+    def column_heading_label(column)
+      "Heading #{column.name}"
+    end
+
+    def check_box_tag(name, value, checked)
+      "checkbox:#{name}:#{value}:#{checked}"
+    end
+
+    def text_field_tag(name, value, options)
+      "text:#{name}:#{value}:#{options[:size]}"
     end
 
     def column_empty?(value)
@@ -148,5 +171,34 @@ class ExportHelpersTest < Minitest::Test
     assert_equal({sz: 11, b: true, bg_color: '69B5EF', fg_color: 'FF', alignment: {horizontal: :center}},
                  @helper.export_column_header_style(column(:name), :xlsx))
     assert_nil @helper.export_column_header_style(column(:name), :csv)
+  end
+
+  def test_list_ui_override_formats_the_export_value
+    export_column = column(:name)
+    export_column.list_ui = :badge
+    export_column.list_ui_options = {badge: 'urgent'}
+
+    value = @helper.export_column_value(Record.new({name: 'Task'}), export_column, :csv)
+
+    assert_equal ['Task-csv-urgent', nil], value
+  end
+
+  def test_format_export_column_preserves_value_without_formatter
+    value = Object.new
+
+    assert_same value, @helper.format_export_column(value, :unknown)
+  end
+
+  def test_header_name_uses_column_heading_label
+    assert_equal 'Heading name', @helper.format_export_column_header_name(column(:name))
+  end
+
+  def test_export_options_include_header_and_delimiter_controls
+    assert_equal [
+      [
+        ['checkbox:skip_header:1:true', :omit_header],
+        ['text:delimiter:;:1', :delimiter]
+      ]
+    ], @helper.export_options
   end
 end

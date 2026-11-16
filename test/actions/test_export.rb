@@ -8,8 +8,11 @@ require 'active_support/core_ext/array/wrap'
 require 'active_support/core_ext/enumerable'
 require 'active_support/core_ext/object/blank'
 require 'active_support/core_ext/string/filters'
+require 'stringio'
 
 module ActiveScaffold
+  ActionNotAllowed = Class.new(StandardError) unless const_defined?(:ActionNotAllowed)
+
   module Actions
   end
 end
@@ -17,6 +20,68 @@ end
 module Axlsx
   WORKSHEET_NAME_FORBIDDEN_CHARS = %w[* / : ? [ \\ ]].freeze
   WORKSHEET_MAX_NAME_LENGTH = 31
+
+  class Styles
+    attr_reader :added
+
+    def initialize
+      @added = []
+    end
+
+    def add_style(style)
+      added << style
+      "style-#{added.length}"
+    end
+  end
+
+  class Sheet
+    attr_reader :rows
+
+    def initialize
+      @rows = []
+    end
+
+    def add_row(values, **options)
+      rows << [values, options]
+    end
+  end
+
+  class Workbook
+    attr_reader :styles, :sheet, :worksheet_name
+
+    def initialize
+      @styles = Styles.new
+    end
+
+    def add_worksheet(name:)
+      @worksheet_name = name
+      @sheet = Sheet.new
+      yield sheet
+    end
+  end
+
+  class Package
+    class << self
+      attr_accessor :last
+    end
+
+    attr_reader :workbook
+
+    def initialize
+      @workbook = Workbook.new
+      self.class.last = self
+    end
+
+    def to_stream
+      StringIO.new('xlsx-data')
+    end
+  end
+end
+
+module Mime
+  def self.[](format)
+    "mime/#{format}"
+  end
 end
 
 require_relative '../../lib/active_scaffold/actions/export'
@@ -40,6 +105,29 @@ class ExportActionsTest < Minitest::Test
     end
   end
   Page = Struct.new(:items, :pager)
+  Response = Struct.new(:headers)
+
+  class Responder
+    def html; end
+
+    def js
+      yield
+    end
+  end
+
+  class ViewContext
+    def export_column_header_style(column, _format)
+      column.name == 'name' ? {width: 20, b: true} : nil
+    end
+
+    def format_export_column_header_name(column)
+      column.name.upcase
+    end
+
+    def get_export_column_value(record, column, _format)
+      [record.fetch(column.name.to_sym), column.name == 'status' ? {italic: true} : nil]
+    end
+  end
 
   class Model
     class << self
@@ -58,8 +146,9 @@ class ExportActionsTest < Minitest::Test
 
     include ActiveScaffold::Actions::Export
 
-    attr_accessor :page, :raise_search_error
-    attr_reader :active_scaffold_config, :params
+    attr_accessor :page, :raise_search_error, :response_body, :view_context, :authorized
+    attr_reader :active_scaffold_config, :params, :response, :rendered, :responded_action,
+                :includes_action, :find_page_options
 
     def initialize
       name = Column.new('name')
@@ -85,6 +174,9 @@ class ExportActionsTest < Minitest::Test
       @params = {}
       @page = Page.new([], Pager.new([]))
       @raise_search_error = false
+      @response = Response.new({})
+      @view_context = ViewContext.new
+      @authorized = true
     end
 
     def grouped_search?
@@ -99,13 +191,46 @@ class ExportActionsTest < Minitest::Test
       +'tasks'
     end
 
+    def respond_to
+      yield Responder.new
+    end
+
+    def render(**options)
+      @rendered = options
+    end
+
+    def render_to_string(**)
+      'csv-data'
+    end
+
+    def set_includes_for_columns(action)
+      @includes_action = action
+      export_columns
+    end
+
+    def find_page(options)
+      @find_page_options = options
+      @page
+    end
+
+    def respond_to_action(action)
+      @responded_action = action
+    end
+
+    def authorized_for?(action:)
+      authorized && action == :read
+    end
+
     def set_page(items:, pages: [])
       @page = Page.new(items, Pager.new(pages.map { |page_items| Page.new(page_items, nil) }))
       instance_variable_set(:@page, @page)
     end
 
-    public :export_columns, :export_file_name, :find_items_for_export, :find_options_for_export,
-           :requested_export_columns, :selected_export_columns, :worksheet_name
+    public :add_xlsx_header, :add_xlsx_record, :export_authorized?, :export_authorized_filter,
+           :export_columns, :export_file_name, :export_respond_to_csv, :export_respond_to_xlsx,
+           :find_items_for_export, :find_options_for_export, :populate_xlsx_sheet,
+           :requested_export_columns, :selected_export_columns, :show_export_authorized?,
+           :show_export_authorized_filter, :worksheet_name, :xlsx_column_widths
   end
 
   class ControllerWithoutSearch < Controller
@@ -226,5 +351,78 @@ class ExportActionsTest < Minitest::Test
 
     assert_equal 'Tasks - 2026- overview-', name
     assert_operator name.length, :<=, 31
+  end
+
+  def test_show_export_renders_the_js_partial
+    controller = Controller.new
+
+    controller.show_export
+
+    assert_same controller.active_scaffold_config.export, controller.instance_variable_get(:@export_config)
+    assert_equal({partial: 'show_export'}, controller.rendered)
+  end
+
+  def test_export_applies_defaults_finds_page_and_sets_download_headers
+    controller = Controller.new
+
+    controller.export
+
+    assert_equal %w[name status], controller.params[:export_columns]
+    assert_equal 'true', controller.params[:full_download]
+    assert_equal ',', controller.params[:delimiter]
+    assert_equal 'false', controller.params[:skip_header]
+    assert_equal :export, controller.includes_action
+    assert_equal 3000, controller.find_page_options[:per_page]
+    assert_equal 'attachment; filename=tasks.csv', controller.response.headers['content-disposition']
+    assert_equal :export, controller.responded_action
+  end
+
+  def test_csv_response_streams_each_page_and_skips_later_headers
+    controller = Controller.new
+    controller.params[:full_download] = 'true'
+    controller.set_page(items: [], pages: [[:first], [:second]])
+
+    controller.export_respond_to_csv
+
+    assert_equal 'mime/csv', controller.response.headers['content-type']
+    assert_equal '0', controller.response.headers['last-modified']
+    assert_equal %w[csv-data csv-data], controller.response_body.to_a
+    assert_equal 'true', controller.params[:skip_header]
+  end
+
+  def test_xlsx_response_populates_and_streams_workbook
+    controller = Controller.new
+    controller.params[:export_columns] = %w[name status]
+    controller.instance_variable_set(:@export_columns, controller.export_columns)
+    controller.set_page(items: [{name: 'Task', status: 'Open', created_at: '2026-11-16'}])
+
+    controller.export_respond_to_xlsx
+
+    package = Axlsx::Package.last
+    assert_equal 'mime/xlsx', controller.response.headers['content-type']
+    assert_equal 'Tasks - 2026- overview-', package.workbook.worksheet_name
+    assert_equal ['NAME', 'STATUS', 'CREATED_AT'], package.workbook.sheet.rows.first.first
+    assert_equal 'xlsx-data', controller.response_body.to_a.join
+  end
+
+  def test_xlsx_widths_prefer_header_then_column_options_then_auto
+    controller = Controller.new
+    controller.params[:export_columns] = %w[name status]
+    columns = controller.export_columns
+    columns[1].export_options = {xlsx: {width: 10}}
+    controller.instance_variable_set(:@export_columns, columns)
+
+    assert_equal [20, 10, :auto], controller.xlsx_column_widths([{width: 20}, nil, nil])
+  end
+
+  def test_authorization_filters_raise_when_read_is_denied
+    controller = Controller.new
+
+    assert controller.export_authorized?
+    assert controller.show_export_authorized?
+    controller.authorized = false
+
+    assert_raises(ActiveScaffold::ActionNotAllowed) { controller.export_authorized_filter }
+    assert_raises(ActiveScaffold::ActionNotAllowed) { controller.show_export_authorized_filter }
   end
 end
