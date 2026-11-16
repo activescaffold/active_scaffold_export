@@ -4,6 +4,7 @@ require 'test_helper'
 
 class TemplatesTest < Minitest::Test
   VIEW_PATH = File.expand_path('../../app/views', __dir__)
+  LOOKUP_CONTEXT = ActionView::LookupContext.new([VIEW_PATH])
 
   Column = Struct.new(:name)
   ExportConfig = Struct.new(
@@ -107,6 +108,8 @@ class TemplatesTest < Minitest::Test
     end
   end
 
+  CompiledViewContext = ViewContext.with_empty_template_cache
+
   def setup
     @columns = [Column.new(:name), Column.new(:status)]
     @export_config = ExportConfig.new(true, true, %i[csv xlsx], 'csv', Set.new, true, false)
@@ -115,8 +118,7 @@ class TemplatesTest < Minitest::Test
       export_config: @export_config,
       records: [Record.new('Task', 'Open')]
     }
-    lookup_context = ActionView::LookupContext.new([VIEW_PATH])
-    @view = ViewContext.with_empty_template_cache.new(lookup_context, assigns, nil)
+    @view = CompiledViewContext.new(LOOKUP_CONTEXT, assigns, nil)
   end
 
   def test_renders_csv_with_headers_and_records
@@ -147,5 +149,17 @@ class TemplatesTest < Minitest::Test
     output = @view.render_root(template: 'active_scaffold_overrides/show_export')
 
     assert_includes output, 'show-export'
+  end
+
+  def test_single_format_is_submitted_in_hidden_field
+    @export_config.formats = [:csv]
+
+    output = @view.render_root(
+      partial: 'active_scaffold_overrides/export_download_options',
+      locals: {export_config: @export_config}
+    )
+
+    assert_includes output, 'name="format"'
+    assert_includes output, 'value="csv"'
   end
 end
