@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'date'
-require 'minitest/autorun'
+require 'test_helper'
 require 'active_support/core_ext/object/blank'
 require 'active_support/core_ext/object/deep_dup'
 
