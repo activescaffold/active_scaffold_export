@@ -11,7 +11,10 @@ require 'active_support/core_ext/string/filters'
 require 'stringio'
 
 module ActiveScaffold
-  ActionNotAllowed = Class.new(StandardError) unless const_defined?(:ActionNotAllowed)
+  unless const_defined?(:ActionNotAllowed)
+    class ActionNotAllowed < StandardError
+    end
+  end
 
   module Actions
   end
@@ -203,7 +206,7 @@ class ExportActionsTest < Minitest::Test
       'csv-data'
     end
 
-    def set_includes_for_columns(action)
+    def set_includes_for_columns(action) # rubocop:disable Naming/AccessorMethodName -- mirrors the controller API
       @includes_action = action
       export_columns
     end
@@ -401,7 +404,7 @@ class ExportActionsTest < Minitest::Test
     package = Axlsx::Package.last
     assert_equal 'mime/xlsx', controller.response.headers['content-type']
     assert_equal 'Tasks - 2026- overview-', package.workbook.worksheet_name
-    assert_equal ['NAME', 'STATUS', 'CREATED_AT'], package.workbook.sheet.rows.first.first
+    assert_equal %w[NAME STATUS CREATED_AT], package.workbook.sheet.rows.first.first
     assert_equal 'xlsx-data', controller.response_body.to_a.join
   end
 
