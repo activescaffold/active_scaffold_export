@@ -1,4 +1,12 @@
 # Active Scaffold Export
+
+[![Build status](https://github.com/activescaffold/active_scaffold_export/actions/workflows/ci.yml/badge.svg)](https://github.com/activescaffold/active_scaffold_export/actions/workflows/ci.yml)
+[![Maintainability](https://qlty.sh/gh/activescaffold/projects/active_scaffold_export/maintainability.svg)](https://qlty.sh/gh/activescaffold/projects/active_scaffold_export)
+[![Code Coverage](https://qlty.sh/gh/activescaffold/projects/active_scaffold_export/coverage.svg)](https://qlty.sh/gh/activescaffold/projects/active_scaffold_export)
+[![Gem Version](https://badge.fury.io/rb/active_scaffold_export.svg)](https://badge.fury.io/rb/active_scaffold_export)
+[![Inline docs](https://inch-ci.org/github/activescaffold/active_scaffold_export.svg?branch=master)](https://inch-ci.org/github/activescaffold/active_scaffold_export)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 An [active scaffold](https://github.com/activescaffold/active_scaffold) addon to let it export data in CSV or XLSX format
 
 ### How to?
