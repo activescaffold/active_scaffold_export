@@ -21,5 +21,6 @@ Gem::Specification.new do |s|
   s.summary = 'Ability to export records to CSV/XLSX with ActiveScaffold'
   s.required_ruby_version = '>= 3.2'
   s.add_dependency 'active_scaffold', '>= 4.4.0'
+  s.add_dependency 'csv'
   s.metadata['rubygems_mfa_required'] = 'true'
 end

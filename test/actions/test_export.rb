@@ -8,17 +8,8 @@ require 'active_support/core_ext/array/wrap'
 require 'active_support/core_ext/enumerable'
 require 'active_support/core_ext/object/blank'
 require 'active_support/core_ext/string/filters'
+require 'active_scaffold/extensions/routing_mapper'
 require 'stringio'
-
-module ActiveScaffold
-  unless const_defined?(:ActionNotAllowed)
-    class ActionNotAllowed < StandardError
-    end
-  end
-
-  module Actions
-  end
-end
 
 module Axlsx
   WORKSHEET_NAME_FORBIDDEN_CHARS = %w[* / : ? [ \\ ]].freeze
@@ -81,12 +72,6 @@ module Axlsx
   end
 end
 
-module Mime
-  def self.[](format)
-    "mime/#{format}"
-  end
-end
-
 require_relative '../../lib/active_scaffold/actions/export'
 
 class ExportActionsTest < Minitest::Test
@@ -101,7 +86,11 @@ class ExportActionsTest < Minitest::Test
   )
   ListUser = Struct.new(:sorting, :per_page, :page)
   ListConfig = Struct.new(:sorting, :pagination, :user)
-  Config = Struct.new(:export, :list, :columns, :model, :label)
+  Config = Struct.new(:export, :list, :columns, :model, :label) do
+    def build_action_columns(action, columns)
+      [action, columns]
+    end
+  end
   Pager = Struct.new(:pages) do
     def each(&)
       pages.each(&)
@@ -149,7 +138,7 @@ class ExportActionsTest < Minitest::Test
 
     include ActiveScaffold::Actions::Export
 
-    attr_accessor :page, :raise_search_error, :response_body, :view_context, :authorized
+    attr_accessor :page, :raise_search_error, :response_body, :view_context, :authorized, :grouped
     attr_reader :active_scaffold_config, :params, :response, :rendered, :responded_action,
                 :includes_action, :find_page_options
 
@@ -183,7 +172,11 @@ class ExportActionsTest < Minitest::Test
     end
 
     def grouped_search?
-      false
+      grouped || false
+    end
+
+    def list_columns_names
+      %i[name status]
     end
 
     def do_search
@@ -230,8 +223,8 @@ class ExportActionsTest < Minitest::Test
     end
 
     public :add_xlsx_header, :add_xlsx_record, :export_authorized?, :export_authorized_filter,
-           :export_columns, :export_file_name, :export_respond_to_csv, :export_respond_to_xlsx,
-           :find_items_for_export, :find_options_for_export, :populate_xlsx_sheet,
+           :export_columns, :export_columns_names, :export_file_name, :export_respond_to_csv, :export_respond_to_xlsx,
+           :export_formats, :find_items_for_export, :find_options_for_export, :populate_xlsx_sheet,
            :requested_export_columns, :selected_export_columns, :show_export_authorized?,
            :show_export_authorized_filter, :worksheet_name, :xlsx_column_widths
   end
@@ -241,6 +234,9 @@ class ExportActionsTest < Minitest::Test
   end
 
   def setup
+    ActiveScaffoldExport::Engine.initializers.find do |initializer|
+      initializer.name == 'active_scaffold_export.routes'
+    end.run
     Model.denied_columns = []
   end
 
@@ -271,6 +267,14 @@ class ExportActionsTest < Minitest::Test
     controller.params[:export_columns] = ['name']
 
     assert_equal %w[name created_at], controller.export_columns.map(&:name)
+  end
+
+  def test_grouped_search_uses_list_columns_for_export
+    controller = Controller.new
+    controller.grouped = true
+
+    assert_equal %i[name status], controller.export_columns_names
+    assert_equal [:export, %i[name status]], controller.export_columns_names(action_columns: true)
   end
 
   def test_full_download_uses_first_page_and_large_batch
@@ -347,6 +351,10 @@ class ExportActionsTest < Minitest::Test
     assert_equal 'tasks.csv', controller.export_file_name
   end
 
+  def test_export_formats_come_from_configuration
+    assert_equal %i[csv xlsx], Controller.new.export_formats
+  end
+
   def test_worksheet_name_replaces_forbidden_characters_and_obeys_limit
     controller = Controller.new
 
@@ -387,7 +395,7 @@ class ExportActionsTest < Minitest::Test
 
     controller.export_respond_to_csv
 
-    assert_equal 'mime/csv', controller.response.headers['content-type']
+    assert_equal Mime[:csv], controller.response.headers['content-type']
     assert_equal '0', controller.response.headers['last-modified']
     assert_equal %w[csv-data csv-data], controller.response_body.to_a
     assert_equal 'true', controller.params[:skip_header]
@@ -402,7 +410,7 @@ class ExportActionsTest < Minitest::Test
     controller.export_respond_to_xlsx
 
     package = Axlsx::Package.last
-    assert_equal 'mime/xlsx', controller.response.headers['content-type']
+    assert_equal Mime[:xlsx], controller.response.headers['content-type']
     assert_equal 'Tasks - 2026- overview-', package.workbook.worksheet_name
     assert_equal %w[NAME STATUS CREATED_AT], package.workbook.sheet.rows.first.first
     assert_equal 'xlsx-data', controller.response_body.to_a.join

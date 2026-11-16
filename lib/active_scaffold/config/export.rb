@@ -7,6 +7,7 @@ module ActiveScaffold::Config
     def initialize(core_config)
       super
       @core = core_config
+      @link = nil
       self.show_form = self.class.show_form
       self.allow_full_download = self.class.allow_full_download
       self.force_quotes = self.class.force_quotes
@@ -122,7 +123,7 @@ module ActiveScaffold::Config
 
     UserSettings.class_eval do
       user_attr :show_form, :allow_full_download, :force_quotes, :default_file_format,
-                :default_delimiter, :default_skip_header, :default_file_format
+                :default_delimiter, :default_skip_header
 
       def default_deselected_columns=(val)
         @default_deselected_columns = ActiveScaffold::DataStructures::Set.new(*val)

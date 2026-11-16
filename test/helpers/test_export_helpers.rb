@@ -5,17 +5,6 @@ require 'test_helper'
 require 'active_support/core_ext/object/blank'
 require 'active_support/core_ext/object/deep_dup'
 
-module ActiveScaffold
-  module Registry
-    def self.cache(_namespace, value)
-      yield
-    end
-  end
-
-  module Helpers
-  end
-end
-
 require_relative '../../lib/active_scaffold/helpers/export_helpers'
 
 class ExportHelpersTest < Minitest::Test
@@ -26,6 +15,8 @@ class ExportHelpersTest < Minitest::Test
   Config = Struct.new(:list, :export)
 
   class Record
+    delegate :[], to: :@attributes
+
     def initialize(attributes, denied: [])
       @attributes = attributes
       @denied = denied
@@ -51,6 +42,7 @@ class ExportHelpersTest < Minitest::Test
   class Helper
     include ActiveScaffold::Helpers::ExportHelpers
 
+    attr_accessor :column_override, :grouped, :search_group_column
     attr_reader :localized
 
     def active_scaffold_config
@@ -58,11 +50,23 @@ class ExportHelpersTest < Minitest::Test
     end
 
     def grouped_search?
-      false
+      grouped || false
     end
 
     def override_helper(*)
-      nil
+      column_override
+    end
+
+    def custom_export_column(record, format)
+      ["custom-#{record.name}-#{format}", nil]
+    end
+
+    def search_group_function
+      :count
+    end
+
+    def format_grouped_search_column(value, options)
+      "grouped-#{value}-#{options[:suffix]}"
     end
 
     def active_scaffold_export_badge(record, column, format, ui_options:)
@@ -181,6 +185,24 @@ class ExportHelpersTest < Minitest::Test
     value = @helper.export_column_value(Record.new({name: 'Task'}), export_column, :csv)
 
     assert_equal ['Task-csv-urgent', nil], value
+  end
+
+  def test_column_override_takes_precedence
+    @helper.column_override = :custom_export_column
+    export_column = column(:name)
+
+    assert_equal ['custom-Task-csv', nil],
+                 @helper.export_column_value(Record.new({name: 'Task'}), export_column, :csv)
+  end
+
+  def test_grouped_search_column_uses_group_formatter
+    @helper.grouped = true
+    export_column = column(:count)
+    export_column.options = {suffix: 'tasks'}
+    @helper.search_group_column = export_column
+
+    assert_equal ['grouped-3-tasks', nil],
+                 @helper.export_column_value(Record.new({count: 3}), export_column, :csv)
   end
 
   def test_format_export_column_preserves_value_without_formatter

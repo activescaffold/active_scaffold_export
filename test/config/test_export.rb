@@ -3,52 +3,21 @@
 require 'test_helper'
 require 'active_support/core_ext/module/attribute_accessors'
 
-module ActiveScaffold
-  module DataStructures
-    class ActionLink
-      attr_reader :action, :options
-
-      def initialize(action, **options)
-        @action = action
-        @options = options
-      end
-    end
-
-    class Set
-      def initialize(*values)
-        @values = values
-      end
-
-      def to_a
-        @values
-      end
-    end
-  end
-
-  module Config
-    class Form
-      attr_accessor :formats
-
-      def self.crud_type=(_value); end
-
-      def self.columns_accessor(name)
-        attr_accessor name
-      end
-
-      class UserSettings
-        def self.user_attr(*); end
-      end
-
-      def initialize(*); end
-    end
-  end
-end
-
 require_relative '../../lib/active_scaffold/config/export'
 
 class ExportConfigTest < Minitest::Test
+  class Core
+    def model_id
+      :record
+    end
+  end
+
+  def build_config
+    ActiveScaffold::Config::Export.new(Core.new)
+  end
+
   def test_defaults_are_copied_to_instance
-    config = ActiveScaffold::Config::Export.new(Object.new)
+    config = build_config
 
     assert config.show_form
     assert config.allow_full_download
@@ -60,22 +29,22 @@ class ExportConfigTest < Minitest::Test
   end
 
   def test_form_link_opens_export_options
-    config = ActiveScaffold::Config::Export.new(Object.new)
+    config = build_config
 
     assert_equal 'show_export', config.link.action
-    assert_equal :collection, config.link.options[:type]
+    assert_equal :collection, config.link.type
   end
 
   def test_direct_link_skips_form_and_uses_export_action
-    config = ActiveScaffold::Config::Export.new(Object.new)
+    config = build_config
     config.show_form = false
 
     assert_equal 'export', config.link.action
-    assert_equal false, config.link.options[:inline]
+    refute config.link.inline?
   end
 
   def test_default_deselected_columns_are_wrapped_in_set
-    config = ActiveScaffold::Config::Export.new(Object.new)
+    config = build_config
 
     config.default_deselected_columns = %i[secret internal]
 
@@ -83,8 +52,24 @@ class ExportConfigTest < Minitest::Test
   end
 
   def test_export_form_is_not_multipart
-    config = ActiveScaffold::Config::Export.new(Object.new)
+    config = build_config
 
     refute config.multipart?
+  end
+
+  def test_user_deselected_columns_inherit_and_override_configuration
+    export_config = build_config
+    export_config.default_deselected_columns = [:secret]
+    settings = ActiveScaffold::Config::Export::UserSettings.new(export_config, {}, {})
+
+    assert_same export_config.default_deselected_columns, settings.default_deselected_columns
+
+    settings.default_deselected_columns = [:internal]
+    assert_equal [:internal], settings.default_deselected_columns.to_a
+
+    empty_config = build_config
+    empty_config.freeze
+    empty_settings = ActiveScaffold::Config::Export::UserSettings.new(empty_config, {}, {})
+    assert_empty empty_settings.default_deselected_columns
   end
 end
